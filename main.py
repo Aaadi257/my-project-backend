@@ -5,7 +5,6 @@ from sqlalchemy.orm import sessionmaker, Session
 from fastapi.responses import FileResponse
 import os
 from datetime import datetime
-import json
 import tempfile
 import openpyxl
 from typing import List
@@ -15,24 +14,40 @@ import logic
 
 app = FastAPI(title="Manager Reward System")
 
+# =========================
 # Database Setup
+# =========================
 SQLALCHEMY_DATABASE_URL = "sqlite:///./rewards.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
 
 # Create Tables
 Base.metadata.create_all(bind=engine)
 
-# CORS
+# =========================
+# CORS (FIXED — PRODUCTION SAFE)
+# =========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",  # local dev (optional but useful)
+        "https://my-project-frontend-hazel.vercel.app"  # Vercel frontend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# =========================
 # Dependency
+# =========================
 def get_db():
     db = SessionLocal()
     try:
@@ -40,40 +55,71 @@ def get_db():
     finally:
         db.close()
 
+# =========================
+# Logic
+# =========================
 def calculate_breakdown(m: MetricsInput) -> Breakdown:
     return Breakdown(
-        google_score=logic.calculate_google_rating_score(m.google_rating_amritsari, m.google_rating_chennai),
+        google_score=logic.calculate_google_rating_score(
+            m.google_rating_amritsari,
+            m.google_rating_chennai
+        ),
         zomato_swiggy_score=logic.calculate_zomato_swiggy_score([
-            m.zomato_rating_amritsari, m.swiggy_rating_amritsari,
-            m.zomato_rating_chennai, m.swiggy_rating_chennai
+            m.zomato_rating_amritsari,
+            m.swiggy_rating_amritsari,
+            m.zomato_rating_chennai,
+            m.swiggy_rating_chennai
         ]),
-        food_cost_score=logic.calculate_food_cost_score(m.food_cost_amritsari, m.food_cost_chennai),
+        food_cost_score=logic.calculate_food_cost_score(
+            m.food_cost_amritsari,
+            m.food_cost_chennai
+        ),
         online_activity_score=logic.calculate_online_activity_score([
-            m.online_activity_amritsari_zomato, m.online_activity_amritsari_swiggy,
-            m.online_activity_chennai_zomato, m.online_activity_chennai_swiggy
+            m.online_activity_amritsari_zomato,
+            m.online_activity_amritsari_swiggy,
+            m.online_activity_chennai_zomato,
+            m.online_activity_chennai_swiggy
         ]),
         kitchen_prep_score=logic.calculate_kitchen_prep_score([
-            m.kitchen_prep_amritsari_zomato, m.kitchen_prep_amritsari_swiggy,
-            m.kitchen_prep_chennai_zomato, m.kitchen_prep_chennai_swiggy
+            m.kitchen_prep_amritsari_zomato,
+            m.kitchen_prep_amritsari_swiggy,
+            m.kitchen_prep_chennai_zomato,
+            m.kitchen_prep_chennai_swiggy
         ]),
         bad_delay_score=logic.calculate_bad_delay_score(
-            [m.bad_order_amritsari_zomato, m.bad_order_amritsari_swiggy, m.bad_order_chennai_zomato, m.bad_order_chennai_swiggy],
-            [m.delay_order_amritsari_zomato, m.delay_order_amritsari_swiggy, m.delay_order_chennai_zomato, m.delay_order_chennai_swiggy]
+            [
+                m.bad_order_amritsari_zomato,
+                m.bad_order_amritsari_swiggy,
+                m.bad_order_chennai_zomato,
+                m.bad_order_chennai_swiggy
+            ],
+            [
+                m.delay_order_amritsari_zomato,
+                m.delay_order_amritsari_swiggy,
+                m.delay_order_chennai_zomato,
+                m.delay_order_chennai_swiggy
+            ]
         ),
-        outlet_audit_score=logic.calculate_outlet_audit_score(m.mistakes_amritsari, m.mistakes_chennai),
-        add_on_sale_score=logic.calculate_add_on_sale_score(m.total_sale_amritsari, m.add_on_sale_amritsari, m.total_sale_chennai, m.add_on_sale_chennai)
+        outlet_audit_score=logic.calculate_outlet_audit_score(
+            m.mistakes_amritsari,
+            m.mistakes_chennai
+        ),
+        add_on_sale_score=logic.calculate_add_on_sale_score(
+            m.total_sale_amritsari,
+            m.add_on_sale_amritsari,
+            m.total_sale_chennai,
+            m.add_on_sale_chennai
+        )
     )
 
+# =========================
+# Routes
+# =========================
 @app.post("/calculate", response_model=ScorecardResponse)
 def calculate_only(data: ScorecardCreate):
-    """Calculates score without saving to DB (Preview)"""
     bd = calculate_breakdown(data.metrics)
-    total = sum([
-        bd.google_score, bd.zomato_swiggy_score, bd.food_cost_score,
-        bd.online_activity_score, bd.kitchen_prep_score, bd.bad_delay_score,
-        bd.outlet_audit_score, bd.add_on_sale_score
-    ])
-    
+    total = sum(bd.model_dump().values())
+
     return ScorecardResponse(
         manager_name=data.manager_name,
         mall_name=data.mall_name,
@@ -86,14 +132,9 @@ def calculate_only(data: ScorecardCreate):
 
 @app.post("/scorecards", response_model=ScorecardResponse)
 def create_scorecard(data: ScorecardCreate, db: Session = Depends(get_db)):
-    """Calculates and Saves Scorecard"""
     bd = calculate_breakdown(data.metrics)
-    total = sum([
-        bd.google_score, bd.zomato_swiggy_score, bd.food_cost_score,
-        bd.online_activity_score, bd.kitchen_prep_score, bd.bad_delay_score,
-        bd.outlet_audit_score, bd.add_on_sale_score
-    ])
-    
+    total = sum(bd.model_dump().values())
+
     db_item = ScorecardDB(
         month=data.month,
         manager_name=data.manager_name,
@@ -102,10 +143,11 @@ def create_scorecard(data: ScorecardCreate, db: Session = Depends(get_db)):
         raw_metrics=data.metrics.model_dump(),
         breakdown=bd.model_dump()
     )
+
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
-    
+
     return ScorecardResponse(
         id=db_item.id,
         manager_name=db_item.manager_name,
@@ -118,32 +160,34 @@ def create_scorecard(data: ScorecardCreate, db: Session = Depends(get_db)):
     )
 
 @app.get("/scorecards", response_model=List[ScorecardResponse])
-def get_scorecards(month: str = Query(None), year: str = Query(None), db: Session = Depends(get_db)):
+def get_scorecards(
+    month: str = Query(None),
+    year: str = Query(None),
+    db: Session = Depends(get_db)
+):
     query = db.query(ScorecardDB)
+
     if month and year:
-        # If both provided, match combined string "Month Year"
         query = query.filter(ScorecardDB.month == f"{month} {year}")
     elif month:
-        # If only month, match start (e.g. "January")
         query = query.filter(ScorecardDB.month.startswith(month))
     elif year:
-        # If only year, match end (e.g. "2026")
         query = query.filter(ScorecardDB.month.endswith(year))
-    
+
     items = query.all()
-    results = []
-    for item in items:
-        results.append(ScorecardResponse(
-            id=item.id,
-            manager_name=item.manager_name,
-            mall_name=item.mall_name,
-            month=item.month,
-            created_at=item.created_at,
-            total_score=item.total_score,
-            breakdown=Breakdown(**item.breakdown),
-            metrics=MetricsInput(**item.raw_metrics)
-        ))
-    return results
+    return [
+        ScorecardResponse(
+            id=i.id,
+            manager_name=i.manager_name,
+            mall_name=i.mall_name,
+            month=i.month,
+            created_at=i.created_at,
+            total_score=i.total_score,
+            breakdown=Breakdown(**i.breakdown),
+            metrics=MetricsInput(**i.raw_metrics)
+        )
+        for i in items
+    ]
 
 @app.delete("/scorecards/{id}")
 def delete_scorecard(id: int, db: Session = Depends(get_db)):
@@ -159,38 +203,36 @@ def export_excel(id: int, db: Session = Depends(get_db)):
     item = db.query(ScorecardDB).filter(ScorecardDB.id == id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Not found")
-        
+
     metrics = MetricsInput(**item.raw_metrics)
     bd = Breakdown(**item.breakdown)
-    
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Scorecard"
-    
-    # Headers
-    headers = ["Metric", "Value", "Points"]
-    ws.append(headers)
-    
-    # Data Rows
+
+    ws.append(["Metric", "Value", "Points"])
     ws.append(["Manager", item.manager_name, ""])
     ws.append(["Mall", item.mall_name, ""])
     ws.append(["Month", item.month, ""])
     ws.append(["Total Score", item.total_score, ""])
     ws.append(["", "", ""])
-    
-    ws.append(["Google Rating", f"Amritsari: {metrics.google_rating_amritsari}, Chennai: {metrics.google_rating_chennai}", bd.google_score])
+
+    ws.append(["Google Rating", f"A: {metrics.google_rating_amritsari}, C: {metrics.google_rating_chennai}", bd.google_score])
     ws.append(["Zomato/Swiggy", "(Avg of 4 ratings)", bd.zomato_swiggy_score])
     ws.append(["Food Cost", f"A: {metrics.food_cost_amritsari}%, C: {metrics.food_cost_chennai}%", bd.food_cost_score])
     ws.append(["Online Activity", "(Avg of 4%)", bd.online_activity_score])
     ws.append(["Kitchen Prep", "(Avg of 4 times)", bd.kitchen_prep_score])
     ws.append(["Bad & Delay", "(Combined Score)", bd.bad_delay_score])
-    ws.append(["Outlet Audit", f"A: {metrics.mistakes_amritsari} mistakes, C: {metrics.mistakes_chennai} mistakes", bd.outlet_audit_score])
+    ws.append(["Outlet Audit", f"A: {metrics.mistakes_amritsari}, C: {metrics.mistakes_chennai}", bd.outlet_audit_score])
     ws.append(["Add On Sale", f"A: {metrics.add_on_sale_amritsari}/{metrics.total_sale_amritsari}, C: {metrics.add_on_sale_chennai}/{metrics.total_sale_chennai}", bd.add_on_sale_score])
-    
-    # Save to temp file
+
     handle, path = tempfile.mkstemp(suffix=".xlsx")
     os.close(handle)
     wb.save(path)
-    
-    return FileResponse(path, filename=f"Scorecard_{item.manager_name}_{item.month}.xlsx", media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+    return FileResponse(
+        path,
+        filename=f"Scorecard_{item.manager_name}_{item.month}.xlsx",
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
