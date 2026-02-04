@@ -17,6 +17,7 @@ app = FastAPI(title="Manager Reward System")
 # =========================
 # Database Setup
 # =========================
+<<<<<<< HEAD
 # Check if running on Render (with disk) or Local
 import os
 if os.path.exists("/var/data"):
@@ -26,6 +27,9 @@ else:
     # Local Development Path
     SQLALCHEMY_DATABASE_URL = "sqlite:///./rewards.db"
 
+=======
+SQLALCHEMY_DATABASE_URL = "sqlite:///./rewards.db"
+>>>>>>> 0c011a9ce90dc17e998d7e053540b1711c819d08
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False}
