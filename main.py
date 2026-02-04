@@ -9,7 +9,14 @@ import tempfile
 import openpyxl
 from typing import List
 
-from models import Base, ScorecardDB, MetricsInput, ScorecardCreate, ScorecardResponse, Breakdown
+from models import (
+    Base,
+    ScorecardDB,
+    MetricsInput,
+    ScorecardCreate,
+    ScorecardResponse,
+    Breakdown,
+)
 import logic
 
 app = FastAPI(title="Manager Reward System")
@@ -17,40 +24,29 @@ app = FastAPI(title="Manager Reward System")
 # =========================
 # Database Setup
 # =========================
-<<<<<<< HEAD
-# Check if running on Render (with disk) or Local
-import os
-if os.path.exists("/var/data"):
-    # Render Persistent Disk Path
-    SQLALCHEMY_DATABASE_URL = "sqlite:////var/data/rewards.db"
-else:
-    # Local Development Path
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./rewards.db"
-
-=======
 SQLALCHEMY_DATABASE_URL = "sqlite:///./rewards.db"
->>>>>>> 0c011a9ce90dc17e998d7e053540b1711c819d08
+
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    connect_args={"check_same_thread": False},
 )
+
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=engine,
 )
 
-# Create Tables
 Base.metadata.create_all(bind=engine)
 
 # =========================
-# CORS (FIXED — PRODUCTION SAFE)
+# CORS (PRODUCTION SAFE)
 # =========================
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",  # local dev (optional but useful)
-        "https://my-project-frontend-hazel.vercel.app"  # Vercel frontend
+        "http://localhost:5173",
+        "https://my-project-frontend-hazel.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -74,54 +70,54 @@ def calculate_breakdown(m: MetricsInput) -> Breakdown:
     return Breakdown(
         google_score=logic.calculate_google_rating_score(
             m.google_rating_amritsari,
-            m.google_rating_chennai
+            m.google_rating_chennai,
         ),
         zomato_swiggy_score=logic.calculate_zomato_swiggy_score([
             m.zomato_rating_amritsari,
             m.swiggy_rating_amritsari,
             m.zomato_rating_chennai,
-            m.swiggy_rating_chennai
+            m.swiggy_rating_chennai,
         ]),
         food_cost_score=logic.calculate_food_cost_score(
             m.food_cost_amritsari,
-            m.food_cost_chennai
+            m.food_cost_chennai,
         ),
         online_activity_score=logic.calculate_online_activity_score([
             m.online_activity_amritsari_zomato,
             m.online_activity_amritsari_swiggy,
             m.online_activity_chennai_zomato,
-            m.online_activity_chennai_swiggy
+            m.online_activity_chennai_swiggy,
         ]),
         kitchen_prep_score=logic.calculate_kitchen_prep_score([
             m.kitchen_prep_amritsari_zomato,
             m.kitchen_prep_amritsari_swiggy,
             m.kitchen_prep_chennai_zomato,
-            m.kitchen_prep_chennai_swiggy
+            m.kitchen_prep_chennai_swiggy,
         ]),
         bad_delay_score=logic.calculate_bad_delay_score(
             [
                 m.bad_order_amritsari_zomato,
                 m.bad_order_amritsari_swiggy,
                 m.bad_order_chennai_zomato,
-                m.bad_order_chennai_swiggy
+                m.bad_order_chennai_swiggy,
             ],
             [
                 m.delay_order_amritsari_zomato,
                 m.delay_order_amritsari_swiggy,
                 m.delay_order_chennai_zomato,
-                m.delay_order_chennai_swiggy
-            ]
+                m.delay_order_chennai_swiggy,
+            ],
         ),
         outlet_audit_score=logic.calculate_outlet_audit_score(
             m.mistakes_amritsari,
-            m.mistakes_chennai
+            m.mistakes_chennai,
         ),
         add_on_sale_score=logic.calculate_add_on_sale_score(
             m.total_sale_amritsari,
             m.add_on_sale_amritsari,
             m.total_sale_chennai,
-            m.add_on_sale_chennai
-        )
+            m.add_on_sale_chennai,
+        ),
     )
 
 # =========================
@@ -139,11 +135,14 @@ def calculate_only(data: ScorecardCreate):
         created_at=datetime.utcnow(),
         total_score=total,
         breakdown=bd,
-        metrics=data.metrics
+        metrics=data.metrics,
     )
 
 @app.post("/scorecards", response_model=ScorecardResponse)
-def create_scorecard(data: ScorecardCreate, db: Session = Depends(get_db)):
+def create_scorecard(
+    data: ScorecardCreate,
+    db: Session = Depends(get_db),
+):
     bd = calculate_breakdown(data.metrics)
     total = sum(bd.model_dump().values())
 
@@ -153,7 +152,7 @@ def create_scorecard(data: ScorecardCreate, db: Session = Depends(get_db)):
         mall_name=data.mall_name,
         total_score=total,
         raw_metrics=data.metrics.model_dump(),
-        breakdown=bd.model_dump()
+        breakdown=bd.model_dump(),
     )
 
     db.add(db_item)
@@ -168,14 +167,14 @@ def create_scorecard(data: ScorecardCreate, db: Session = Depends(get_db)):
         created_at=db_item.created_at,
         total_score=db_item.total_score,
         breakdown=Breakdown(**db_item.breakdown),
-        metrics=MetricsInput(**db_item.raw_metrics)
+        metrics=MetricsInput(**db_item.raw_metrics),
     )
 
 @app.get("/scorecards", response_model=List[ScorecardResponse])
 def get_scorecards(
     month: str = Query(None),
     year: str = Query(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     query = db.query(ScorecardDB)
 
@@ -187,6 +186,7 @@ def get_scorecards(
         query = query.filter(ScorecardDB.month.endswith(year))
 
     items = query.all()
+
     return [
         ScorecardResponse(
             id=i.id,
@@ -196,7 +196,7 @@ def get_scorecards(
             created_at=i.created_at,
             total_score=i.total_score,
             breakdown=Breakdown(**i.breakdown),
-            metrics=MetricsInput(**i.raw_metrics)
+            metrics=MetricsInput(**i.raw_metrics),
         )
         for i in items
     ]
@@ -206,6 +206,7 @@ def delete_scorecard(id: int, db: Session = Depends(get_db)):
     item = db.query(ScorecardDB).filter(ScorecardDB.id == id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Not found")
+
     db.delete(item)
     db.commit()
     return {"ok": True}
@@ -246,5 +247,5 @@ def export_excel(id: int, db: Session = Depends(get_db)):
     return FileResponse(
         path,
         filename=f"Scorecard_{item.manager_name}_{item.month}.xlsx",
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
