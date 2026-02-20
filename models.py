@@ -16,7 +16,7 @@ class ScorecardDB(Base):
     mall_name = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    total_score = Column(Float)
+    total_score = Column(Float, index=True)
     
     # Store complex data as JSON
     raw_metrics = Column(JSON)

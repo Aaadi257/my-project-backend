@@ -46,6 +46,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8080",
         "https://my-project-frontend-hazel.vercel.app",
     ],
     allow_credentials=True,
@@ -210,6 +212,46 @@ def get_scorecards(
         )
         for i in items
     ]
+
+@app.get("/leaderboard", response_model=List[ScorecardResponse])
+def get_leaderboard(
+    month: str = Query(None),
+    year: str = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns ALL scorecards sorted by total_score descending.
+    Supports optional month/year filtering.
+    Never deletes or hides old records.
+    """
+    try:
+        query = db.query(ScorecardDB)
+
+        if month and year:
+            query = query.filter(ScorecardDB.month == f"{month} {year}")
+        elif month:
+            query = query.filter(ScorecardDB.month.startswith(month))
+        elif year:
+            query = query.filter(ScorecardDB.month.endswith(year))
+
+        # Sort by score descending on the DB side (uses the index)
+        items = query.order_by(ScorecardDB.total_score.desc()).all()
+
+        return [
+            ScorecardResponse(
+                id=i.id,
+                manager_name=i.manager_name,
+                mall_name=i.mall_name,
+                month=i.month,
+                created_at=i.created_at,
+                total_score=i.total_score,
+                breakdown=Breakdown(**i.breakdown),
+                metrics=MetricsInput(**i.raw_metrics),
+            )
+            for i in items
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 @app.delete("/scorecards/{id}")
 def delete_scorecard(id: int, db: Session = Depends(get_db)):
