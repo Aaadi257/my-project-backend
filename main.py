@@ -71,52 +71,61 @@ def calculate_breakdown(m: MetricsInput) -> Breakdown:
         google_score=logic.calculate_google_rating_score(
             m.google_rating_amritsari,
             m.google_rating_chennai,
+            m.google_rating_chaat_masala,
         ),
         zomato_swiggy_score=logic.calculate_zomato_swiggy_score([
             m.zomato_rating_amritsari,
             m.swiggy_rating_amritsari,
             m.zomato_rating_chennai,
             m.swiggy_rating_chennai,
+            m.zomato_rating_chaat_masala,
+            m.swiggy_rating_chaat_masala,
         ]),
         food_cost_score=logic.calculate_food_cost_score(
             m.food_cost_amritsari,
             m.food_cost_chennai,
+            m.food_cost_chaat_masala,
         ),
         online_activity_score=logic.calculate_online_activity_score([
             m.online_activity_amritsari_zomato,
             m.online_activity_amritsari_swiggy,
             m.online_activity_chennai_zomato,
             m.online_activity_chennai_swiggy,
+            m.online_activity_chaat_masala_zomato,
+            m.online_activity_chaat_masala_swiggy,
         ]),
         kitchen_prep_score=logic.calculate_kitchen_prep_score([
             m.kitchen_prep_amritsari_zomato,
             m.kitchen_prep_amritsari_swiggy,
             m.kitchen_prep_chennai_zomato,
             m.kitchen_prep_chennai_swiggy,
+            m.kitchen_prep_chaat_masala_zomato,
+            m.kitchen_prep_chaat_masala_swiggy,
         ]),
         bad_delay_score=logic.calculate_bad_delay_score(
             [
                 m.bad_order_amritsari_zomato,
-                m.bad_order_amritsari_swiggy,
                 m.bad_order_chennai_zomato,
-                m.bad_order_chennai_swiggy,
+                m.bad_order_chaat_masala_zomato,
             ],
             [
-                m.delay_order_amritsari_zomato,
                 m.delay_order_amritsari_swiggy,
-                m.delay_order_chennai_zomato,
                 m.delay_order_chennai_swiggy,
+                m.delay_order_chaat_masala_swiggy,
             ],
         ),
         outlet_audit_score=logic.calculate_outlet_audit_score(
             m.mistakes_amritsari,
             m.mistakes_chennai,
+            m.mistakes_chaat_masala,
         ),
         add_on_sale_score=logic.calculate_add_on_sale_score(
             m.total_sale_amritsari,
             m.add_on_sale_amritsari,
             m.total_sale_chennai,
             m.add_on_sale_chennai,
+            m.total_sale_chaat_masala,
+            m.add_on_sale_chaat_masala,
         ),
     )
 
@@ -143,6 +152,7 @@ def create_scorecard(
     data: ScorecardCreate,
     db: Session = Depends(get_db),
 ):
+    # Validation if needed
     bd = calculate_breakdown(data.metrics)
     total = sum(bd.model_dump().values())
 
@@ -231,14 +241,14 @@ def export_excel(id: int, db: Session = Depends(get_db)):
     ws.append(["Total Score", item.total_score, ""])
     ws.append(["", "", ""])
 
-    ws.append(["Google Rating", f"A: {metrics.google_rating_amritsari}, C: {metrics.google_rating_chennai}", bd.google_score])
-    ws.append(["Zomato/Swiggy", "(Avg of 4 ratings)", bd.zomato_swiggy_score])
-    ws.append(["Food Cost", f"A: {metrics.food_cost_amritsari}%, C: {metrics.food_cost_chennai}%", bd.food_cost_score])
-    ws.append(["Online Activity", "(Avg of 4%)", bd.online_activity_score])
-    ws.append(["Kitchen Prep", "(Avg of 4 times)", bd.kitchen_prep_score])
-    ws.append(["Bad & Delay", "(Combined Score)", bd.bad_delay_score])
-    ws.append(["Outlet Audit", f"A: {metrics.mistakes_amritsari}, C: {metrics.mistakes_chennai}", bd.outlet_audit_score])
-    ws.append(["Add On Sale", f"A: {metrics.add_on_sale_amritsari}/{metrics.total_sale_amritsari}, C: {metrics.add_on_sale_chennai}/{metrics.total_sale_chennai}", bd.add_on_sale_score])
+    ws.append(["Google Rating", f"A: {metrics.google_rating_amritsari}, C: {metrics.google_rating_chennai}, CM: {metrics.google_rating_chaat_masala}", bd.google_score])
+    ws.append(["Zomato/Swiggy", "(Avg of 6 ratings)", bd.zomato_swiggy_score])
+    ws.append(["Food Cost", f"A: {metrics.food_cost_amritsari}%, C: {metrics.food_cost_chennai}%, CM: {metrics.food_cost_chaat_masala}%", bd.food_cost_score])
+    ws.append(["Online Activity", "(Avg of 6%)", bd.online_activity_score])
+    ws.append(["Kitchen Prep", "(Avg of 6 times)", bd.kitchen_prep_score])
+    ws.append(["Bad & Delay", "(Combined Score - Zomato Bad, Swiggy Delay)", bd.bad_delay_score])
+    ws.append(["Outlet Audit", f"A: {metrics.mistakes_amritsari}, C: {metrics.mistakes_chennai}, CM: {metrics.mistakes_chaat_masala}", bd.outlet_audit_score])
+    ws.append(["Add On Sale", f"A: {metrics.add_on_sale_amritsari}/{metrics.total_sale_amritsari}, C: {metrics.add_on_sale_chennai}/{metrics.total_sale_chennai}, CM: {metrics.add_on_sale_chaat_masala}/{metrics.total_sale_chaat_masala}", bd.add_on_sale_score])
 
     handle, path = tempfile.mkstemp(suffix=".xlsx")
     os.close(handle)

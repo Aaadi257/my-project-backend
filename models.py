@@ -27,49 +27,58 @@ class MetricsInput(BaseModel):
     # Google Ratings
     google_rating_amritsari: float
     google_rating_chennai: float
+    google_rating_chaat_masala: float
     
-    # Zomato + Swiggy Ratings (4 ratings)
+    # Zomato + Swiggy Ratings (6 ratings)
     zomato_rating_amritsari: float
     swiggy_rating_amritsari: float
     zomato_rating_chennai: float
     swiggy_rating_chennai: float
+    zomato_rating_chaat_masala: float
+    swiggy_rating_chaat_masala: float
     
     # Food Cost %
     food_cost_amritsari: float
     food_cost_chennai: float
+    food_cost_chaat_masala: float
     
-    # Online Activity % (4 measurements)
+    # Online Activity % (6 measurements)
     online_activity_amritsari_zomato: float
     online_activity_amritsari_swiggy: float
     online_activity_chennai_zomato: float
     online_activity_chennai_swiggy: float
+    online_activity_chaat_masala_zomato: float
+    online_activity_chaat_masala_swiggy: float
     
-    # Kitchen Prep Time (4 measurements)
+    # Kitchen Prep Time (6 measurements)
     kitchen_prep_amritsari_zomato: float
     kitchen_prep_amritsari_swiggy: float
     kitchen_prep_chennai_zomato: float
     kitchen_prep_chennai_swiggy: float
+    kitchen_prep_chaat_masala_zomato: float
+    kitchen_prep_chaat_masala_swiggy: float
     
-    # Bad & Delay Order % (4 measurements each)
+    # Bad & Delay Order % (3 measurements each)
     bad_order_amritsari_zomato: float
-    bad_order_amritsari_swiggy: float
     bad_order_chennai_zomato: float
-    bad_order_chennai_swiggy: float
+    bad_order_chaat_masala_zomato: float
     
-    delay_order_amritsari_zomato: float
     delay_order_amritsari_swiggy: float
-    delay_order_chennai_zomato: float
     delay_order_chennai_swiggy: float
+    delay_order_chaat_masala_swiggy: float
     
     # Outlet Audit
     mistakes_amritsari: int
     mistakes_chennai: int
+    mistakes_chaat_masala: int
     
     # Add on Sale
     total_sale_amritsari: float
     add_on_sale_amritsari: float
     total_sale_chennai: float
     add_on_sale_chennai: float
+    total_sale_chaat_masala: float
+    add_on_sale_chaat_masala: float
 
 class ScorecardCreate(BaseModel):
     manager_name: str
