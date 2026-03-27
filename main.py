@@ -182,6 +182,42 @@ def create_scorecard(
         metrics=MetricsInput(**db_item.raw_metrics),
     )
 
+@app.put("/scorecards/{id}", response_model=ScorecardResponse)
+def update_scorecard(
+    id: int,
+    data: ScorecardCreate,
+    db: Session = Depends(get_db),
+):
+    db_item = db.query(ScorecardDB).filter(ScorecardDB.id == id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Scorecard not found")
+
+    # Recalculate with new metrics
+    bd = calculate_breakdown(data.metrics)
+    total = sum(bd.model_dump().values())
+
+    # Update existing record in place
+    db_item.manager_name = data.manager_name
+    db_item.mall_name = data.mall_name
+    db_item.month = data.month
+    db_item.total_score = total
+    db_item.raw_metrics = data.metrics.model_dump()
+    db_item.breakdown = bd.model_dump()
+
+    db.commit()
+    db.refresh(db_item)
+
+    return ScorecardResponse(
+        id=db_item.id,
+        manager_name=db_item.manager_name,
+        mall_name=db_item.mall_name,
+        month=db_item.month,
+        created_at=db_item.created_at,
+        total_score=db_item.total_score,
+        breakdown=Breakdown(**db_item.breakdown),
+        metrics=MetricsInput(**db_item.raw_metrics),
+    )
+
 @app.get("/scorecards", response_model=List[ScorecardResponse])
 def get_scorecards(
     month: str = Query(None),
