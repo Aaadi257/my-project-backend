@@ -25,60 +25,60 @@ class ScorecardDB(Base):
 # Pydantic Models for API
 class MetricsInput(BaseModel):
     # Google Ratings
-    google_rating_amritsari: float
-    google_rating_chennai: float
-    google_rating_chaat_masala: float
+    google_rating_amritsari: Optional[float] = None
+    google_rating_chennai: Optional[float] = None
+    google_rating_chaat_masala: Optional[float] = None
     
     # Zomato + Swiggy Ratings (6 ratings)
-    zomato_rating_amritsari: float
-    swiggy_rating_amritsari: float
-    zomato_rating_chennai: float
-    swiggy_rating_chennai: float
-    zomato_rating_chaat_masala: float
-    swiggy_rating_chaat_masala: float
+    zomato_rating_amritsari: Optional[float] = None
+    swiggy_rating_amritsari: Optional[float] = None
+    zomato_rating_chennai: Optional[float] = None
+    swiggy_rating_chennai: Optional[float] = None
+    zomato_rating_chaat_masala: Optional[float] = None
+    swiggy_rating_chaat_masala: Optional[float] = None
     
     # Food Cost %
-    food_cost_amritsari: float
-    food_cost_chennai: float
-    food_cost_chaat_masala: float
+    food_cost_amritsari: Optional[float] = None
+    food_cost_chennai: Optional[float] = None
+    food_cost_chaat_masala: Optional[float] = None
     
     # Online Activity % (6 measurements)
-    online_activity_amritsari_zomato: float
-    online_activity_amritsari_swiggy: float
-    online_activity_chennai_zomato: float
-    online_activity_chennai_swiggy: float
-    online_activity_chaat_masala_zomato: float
-    online_activity_chaat_masala_swiggy: float
+    online_activity_amritsari_zomato: Optional[float] = None
+    online_activity_amritsari_swiggy: Optional[float] = None
+    online_activity_chennai_zomato: Optional[float] = None
+    online_activity_chennai_swiggy: Optional[float] = None
+    online_activity_chaat_masala_zomato: Optional[float] = None
+    online_activity_chaat_masala_swiggy: Optional[float] = None
     
     # Kitchen Prep Time (6 measurements)
-    kitchen_prep_amritsari_zomato: float
-    kitchen_prep_amritsari_swiggy: float
-    kitchen_prep_chennai_zomato: float
-    kitchen_prep_chennai_swiggy: float
-    kitchen_prep_chaat_masala_zomato: float
-    kitchen_prep_chaat_masala_swiggy: float
+    kitchen_prep_amritsari_zomato: Optional[float] = None
+    kitchen_prep_amritsari_swiggy: Optional[float] = None
+    kitchen_prep_chennai_zomato: Optional[float] = None
+    kitchen_prep_chennai_swiggy: Optional[float] = None
+    kitchen_prep_chaat_masala_zomato: Optional[float] = None
+    kitchen_prep_chaat_masala_swiggy: Optional[float] = None
     
     # Bad & Delay Order % (3 measurements each)
-    bad_order_amritsari_zomato: float
-    bad_order_chennai_zomato: float
-    bad_order_chaat_masala_zomato: float
+    bad_order_amritsari_zomato: Optional[float] = None
+    bad_order_chennai_zomato: Optional[float] = None
+    bad_order_chaat_masala_zomato: Optional[float] = None
     
-    delay_order_amritsari_swiggy: float
-    delay_order_chennai_swiggy: float
-    delay_order_chaat_masala_swiggy: float
+    delay_order_amritsari_swiggy: Optional[float] = None
+    delay_order_chennai_swiggy: Optional[float] = None
+    delay_order_chaat_masala_swiggy: Optional[float] = None
     
     # Outlet Audit
-    mistakes_amritsari: int
-    mistakes_chennai: int
-    mistakes_chaat_masala: int
+    mistakes_amritsari: Optional[int] = None
+    mistakes_chennai: Optional[int] = None
+    mistakes_chaat_masala: Optional[int] = None
     
     # Add on Sale
-    total_sale_amritsari: float
-    add_on_sale_amritsari: float
-    total_sale_chennai: float
-    add_on_sale_chennai: float
-    total_sale_chaat_masala: float
-    add_on_sale_chaat_masala: float
+    total_sale_amritsari: Optional[float] = None
+    add_on_sale_amritsari: Optional[float] = None
+    total_sale_chennai: Optional[float] = None
+    add_on_sale_chennai: Optional[float] = None
+    total_sale_chaat_masala: Optional[float] = None
+    add_on_sale_chaat_masala: Optional[float] = None
 
 class ScorecardCreate(BaseModel):
     manager_name: str
@@ -89,7 +89,7 @@ class ScorecardCreate(BaseModel):
 class Breakdown(BaseModel):
     google_score: int
     zomato_swiggy_score: int
-    food_cost_score: int
+    food_cost_score: float
     online_activity_score: int
     kitchen_prep_score: int
     bad_delay_score: int
