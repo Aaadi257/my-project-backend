@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from fastapi.responses import FileResponse
 import os
+import traceback
 from datetime import datetime
 import tempfile
 import openpyxl
@@ -44,12 +45,7 @@ Base.metadata.create_all(bind=engine)
 # =========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:8080",
-        "https://my-project-frontend-hazel.vercel.app",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -64,6 +60,13 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# =========================
+# Health Check
+# =========================
+@app.get("/")
+def read_root():
+    return {"message": "Manager Reward System API is running"}
 
 # =========================
 # Logic
@@ -121,6 +124,11 @@ def calculate_breakdown(m: MetricsInput) -> Breakdown:
             m.mistakes_chennai,
             m.mistakes_chaat_masala,
         ),
+        negative_review_score=logic.calculate_negative_review_score(
+            m.negative_reviews_amritsari,
+            m.negative_reviews_chennai,
+            m.negative_reviews_chaat_masala,
+        ),
         add_on_sale_score=logic.calculate_add_on_sale_score(
             m.total_sale_amritsari,
             m.add_on_sale_amritsari,
@@ -136,51 +144,66 @@ def calculate_breakdown(m: MetricsInput) -> Breakdown:
 # =========================
 @app.post("/calculate", response_model=ScorecardResponse)
 def calculate_only(data: ScorecardCreate):
-    bd = calculate_breakdown(data.metrics)
-    total = sum(bd.model_dump().values())
-
-    return ScorecardResponse(
-        manager_name=data.manager_name,
-        mall_name=data.mall_name,
-        month=data.month,
-        created_at=datetime.utcnow(),
-        total_score=total,
-        breakdown=bd,
-        metrics=data.metrics,
-    )
+    try:
+        bd = calculate_breakdown(data.metrics)
+        total = round(sum(bd.model_dump().values()), 2)
+        print(f"[calculate] breakdown={bd.model_dump()}, total={total}")
+        return ScorecardResponse(
+            manager_name=data.manager_name,
+            mall_name=data.mall_name,
+            month=data.month,
+            created_at=datetime.utcnow(),
+            total_score=total,
+            breakdown=bd,
+            metrics=data.metrics,
+        )
+    except Exception as e:
+        print(f"[ERROR /calculate]: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Calculation error: {str(e)}")
 
 @app.post("/scorecards", response_model=ScorecardResponse)
 def create_scorecard(
     data: ScorecardCreate,
     db: Session = Depends(get_db),
 ):
-    # Validation if needed
-    bd = calculate_breakdown(data.metrics)
-    total = sum(bd.model_dump().values())
+    try:
+        print(f"[POST /scorecards] Received: manager={data.manager_name}, mall={data.mall_name}, month={data.month}")
+        print(f"[POST /scorecards] Metrics: {data.metrics.model_dump()}")
 
-    db_item = ScorecardDB(
-        month=data.month,
-        manager_name=data.manager_name,
-        mall_name=data.mall_name,
-        total_score=total,
-        raw_metrics=data.metrics.model_dump(),
-        breakdown=bd.model_dump(),
-    )
+        bd = calculate_breakdown(data.metrics)
+        total = round(sum(bd.model_dump().values()), 2)
+        print(f"[POST /scorecards] Breakdown: {bd.model_dump()}, Total: {total}")
 
-    db.add(db_item)
-    db.commit()
-    db.refresh(db_item)
+        db_item = ScorecardDB(
+            month=data.month,
+            manager_name=data.manager_name,
+            mall_name=data.mall_name,
+            total_score=total,
+            raw_metrics=data.metrics.model_dump(),
+            breakdown=bd.model_dump(),
+        )
 
-    return ScorecardResponse(
-        id=db_item.id,
-        manager_name=db_item.manager_name,
-        mall_name=db_item.mall_name,
-        month=db_item.month,
-        created_at=db_item.created_at,
-        total_score=db_item.total_score,
-        breakdown=Breakdown(**db_item.breakdown),
-        metrics=MetricsInput(**db_item.raw_metrics),
-    )
+        db.add(db_item)
+        db.commit()
+        db.refresh(db_item)
+        print(f"[POST /scorecards] Saved with id={db_item.id}")
+
+        return ScorecardResponse(
+            id=db_item.id,
+            manager_name=db_item.manager_name,
+            mall_name=db_item.mall_name,
+            month=db_item.month,
+            created_at=db_item.created_at,
+            total_score=db_item.total_score,
+            breakdown=Breakdown(**db_item.breakdown),
+            metrics=MetricsInput(**db_item.raw_metrics),
+        )
+    except Exception as e:
+        print(f"[ERROR POST /scorecards]: {e}")
+        traceback.print_exc()
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create scorecard: {str(e)}")
 
 @app.put("/scorecards/{id}", response_model=ScorecardResponse)
 def update_scorecard(
@@ -188,35 +211,44 @@ def update_scorecard(
     data: ScorecardCreate,
     db: Session = Depends(get_db),
 ):
-    db_item = db.query(ScorecardDB).filter(ScorecardDB.id == id).first()
-    if not db_item:
-        raise HTTPException(status_code=404, detail="Scorecard not found")
+    try:
+        print(f"[PUT /scorecards/{id}] Received: manager={data.manager_name}")
+        db_item = db.query(ScorecardDB).filter(ScorecardDB.id == id).first()
+        if not db_item:
+            raise HTTPException(status_code=404, detail="Scorecard not found")
 
-    # Recalculate with new metrics
-    bd = calculate_breakdown(data.metrics)
-    total = sum(bd.model_dump().values())
+        bd = calculate_breakdown(data.metrics)
+        total = round(sum(bd.model_dump().values()), 2)
+        print(f"[PUT /scorecards/{id}] Breakdown: {bd.model_dump()}, Total: {total}")
 
-    # Update existing record in place
-    db_item.manager_name = data.manager_name
-    db_item.mall_name = data.mall_name
-    db_item.month = data.month
-    db_item.total_score = total
-    db_item.raw_metrics = data.metrics.model_dump()
-    db_item.breakdown = bd.model_dump()
+        db_item.manager_name = data.manager_name
+        db_item.mall_name = data.mall_name
+        db_item.month = data.month
+        db_item.total_score = total
+        db_item.raw_metrics = data.metrics.model_dump()
+        db_item.breakdown = bd.model_dump()
 
-    db.commit()
-    db.refresh(db_item)
+        db.commit()
+        db.refresh(db_item)
+        print(f"[PUT /scorecards/{id}] Updated successfully")
 
-    return ScorecardResponse(
-        id=db_item.id,
-        manager_name=db_item.manager_name,
-        mall_name=db_item.mall_name,
-        month=db_item.month,
-        created_at=db_item.created_at,
-        total_score=db_item.total_score,
-        breakdown=Breakdown(**db_item.breakdown),
-        metrics=MetricsInput(**db_item.raw_metrics),
-    )
+        return ScorecardResponse(
+            id=db_item.id,
+            manager_name=db_item.manager_name,
+            mall_name=db_item.mall_name,
+            month=db_item.month,
+            created_at=db_item.created_at,
+            total_score=db_item.total_score,
+            breakdown=Breakdown(**db_item.breakdown),
+            metrics=MetricsInput(**db_item.raw_metrics),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ERROR PUT /scorecards/{id}]: {e}")
+        traceback.print_exc()
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to update scorecard: {str(e)}")
 
 @app.get("/scorecards", response_model=List[ScorecardResponse])
 def get_scorecards(
@@ -326,6 +358,7 @@ def export_excel(id: int, db: Session = Depends(get_db)):
     ws.append(["Kitchen Prep", "(Avg of 6 times)", bd.kitchen_prep_score])
     ws.append(["Bad & Delay", "(Combined Score - Zomato Bad, Swiggy Delay)", bd.bad_delay_score])
     ws.append(["Outlet Audit", f"A: {metrics.mistakes_amritsari}, C: {metrics.mistakes_chennai}, CM: {metrics.mistakes_chaat_masala}", bd.outlet_audit_score])
+    ws.append(["Negative Reviews", f"A: {metrics.negative_reviews_amritsari}, C: {metrics.negative_reviews_chennai}, CM: {metrics.negative_reviews_chaat_masala}", bd.negative_review_score])
     ws.append(["Add On Sale", f"A: {metrics.add_on_sale_amritsari}/{metrics.total_sale_amritsari}, C: {metrics.add_on_sale_chennai}/{metrics.total_sale_chennai}, CM: {metrics.add_on_sale_chaat_masala}/{metrics.total_sale_chaat_masala}", bd.add_on_sale_score])
 
     handle, path = tempfile.mkstemp(suffix=".xlsx")

@@ -72,6 +72,11 @@ class MetricsInput(BaseModel):
     mistakes_chennai: Optional[int] = None
     mistakes_chaat_masala: Optional[int] = None
     
+    # Negative Reviews
+    negative_reviews_amritsari: Optional[int] = None
+    negative_reviews_chennai: Optional[int] = None
+    negative_reviews_chaat_masala: Optional[int] = None
+
     # Add on Sale
     total_sale_amritsari: Optional[float] = None
     add_on_sale_amritsari: Optional[float] = None
@@ -94,6 +99,7 @@ class Breakdown(BaseModel):
     kitchen_prep_score: int
     bad_delay_score: int
     outlet_audit_score: float
+    negative_review_score: float = 0.0
     add_on_sale_score: float
 
 class ScorecardResponse(BaseModel):

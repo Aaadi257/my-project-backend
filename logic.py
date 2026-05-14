@@ -120,6 +120,14 @@ def calculate_outlet_audit_score(mistakes_a: Optional[int], mistakes_c: Optional
     
     return sum(scores) / len(scores) if scores else 0
 
+def calculate_negative_review_score(neg_a: Optional[int], neg_c: Optional[int], neg_cm: Optional[int]) -> float:
+    """Each negative review deducts 0.25 points. Total deduction = sum of (input * -0.25) per restaurant."""
+    total = 0.0
+    if neg_a is not None: total += neg_a * (-0.25)
+    if neg_c is not None: total += neg_c * (-0.25)
+    if neg_cm is not None: total += neg_cm * (-0.25)
+    return total
+
 def calculate_add_on_sale_score(ts_a: Optional[float], aos_a: Optional[float], ts_c: Optional[float], aos_c: Optional[float], ts_cm: Optional[float], aos_cm: Optional[float]) -> float:
     def score_aos(ts, aos):
         if ts <= 0: return 0
