@@ -85,6 +85,14 @@ class MetricsInput(BaseModel):
     total_sale_chaat_masala: Optional[float] = None
     add_on_sale_chaat_masala: Optional[float] = None
 
+    # Software Inventory ("filled_correctly" = 10 pts, "filled_incorrectly"/None = 0 pts;
+    # legacy "filled" still scores 10 for backward compatibility)
+    inventory_form: Optional[str] = None
+
+    # Rolling 3-month metrics (value represents selected month + previous 2 months)
+    staff_alteration: Optional[int] = None
+    manager_quarterly_leave: Optional[float] = None
+
 class ScorecardCreate(BaseModel):
     manager_name: str
     mall_name: str
@@ -101,6 +109,9 @@ class Breakdown(BaseModel):
     outlet_audit_score: float
     negative_review_score: float = 0.0
     add_on_sale_score: float
+    inventory_form_score: int = 0
+    staff_alteration_score: int = 0
+    manager_quarterly_leave_score: int = 0
 
 class ScorecardResponse(BaseModel):
     id: Optional[int] = None

@@ -128,6 +128,32 @@ def calculate_negative_review_score(neg_a: Optional[int], neg_c: Optional[int], 
     if neg_cm is not None: total += neg_cm * (-0.25)
     return total
 
+def calculate_inventory_form_score(value: Optional[str]) -> int:
+    """Software Inventory: 'filled_correctly' awards 10 points, anything else (including
+    'filled_incorrectly'/None) awards 0. Legacy value 'filled' is still honoured as 10 for
+    backward compatibility with previously stored records."""
+    return 10 if value in ("filled_correctly", "filled") else 0
+
+def calculate_staff_alteration_score(count: Optional[int]) -> int:
+    """Staff Alteration (trailing 3-month count, fewer is better). Blank/None contributes 0."""
+    if count is None: return 0
+    if count <= 0: return 10
+    if count <= 1: return 8
+    if count <= 2: return 6
+    if count <= 3: return 4
+    if count <= 4: return 2
+    return 0
+
+def calculate_manager_quarterly_leave_score(days: Optional[float]) -> int:
+    """Manager Quarterly Leave (trailing 3-month leave days, fewer is better). Blank/None contributes 0."""
+    if days is None: return 0
+    if days <= 3: return 10
+    if days <= 5: return 8
+    if days <= 7: return 6
+    if days <= 9: return 4
+    if days <= 11: return 2
+    return 0
+
 def calculate_add_on_sale_score(ts_a: Optional[float], aos_a: Optional[float], ts_c: Optional[float], aos_c: Optional[float], ts_cm: Optional[float], aos_cm: Optional[float]) -> float:
     def score_aos(ts, aos):
         if ts <= 0: return 0

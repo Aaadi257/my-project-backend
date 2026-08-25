@@ -137,6 +137,9 @@ def calculate_breakdown(m: MetricsInput) -> Breakdown:
             m.total_sale_chaat_masala,
             m.add_on_sale_chaat_masala,
         ),
+        inventory_form_score=logic.calculate_inventory_form_score(m.inventory_form),
+        staff_alteration_score=logic.calculate_staff_alteration_score(m.staff_alteration),
+        manager_quarterly_leave_score=logic.calculate_manager_quarterly_leave_score(m.manager_quarterly_leave),
     )
 
 # =========================
@@ -360,6 +363,9 @@ def export_excel(id: int, db: Session = Depends(get_db)):
     ws.append(["Outlet Audit", f"A: {metrics.mistakes_amritsari}, C: {metrics.mistakes_chennai}, CM: {metrics.mistakes_chaat_masala}", bd.outlet_audit_score])
     ws.append(["Negative Reviews", f"A: {metrics.negative_reviews_amritsari}, C: {metrics.negative_reviews_chennai}, CM: {metrics.negative_reviews_chaat_masala}", bd.negative_review_score])
     ws.append(["Add On Sale", f"A: {metrics.add_on_sale_amritsari}/{metrics.total_sale_amritsari}, C: {metrics.add_on_sale_chennai}/{metrics.total_sale_chennai}, CM: {metrics.add_on_sale_chaat_masala}/{metrics.total_sale_chaat_masala}", bd.add_on_sale_score])
+    ws.append(["Software Inventory", metrics.inventory_form, bd.inventory_form_score])
+    ws.append(["Staff Alteration (3-mo)", metrics.staff_alteration, bd.staff_alteration_score])
+    ws.append(["Manager Quarterly Leave (3-mo)", metrics.manager_quarterly_leave, bd.manager_quarterly_leave_score])
 
     handle, path = tempfile.mkstemp(suffix=".xlsx")
     os.close(handle)
