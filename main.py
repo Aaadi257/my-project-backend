@@ -25,7 +25,25 @@ app = FastAPI(title="Manager Reward System")
 # =========================
 # Database Setup
 # =========================
-SQLALCHEMY_DATABASE_URL = "sqlite:///./rewards.db"
+def _resolve_db_path() -> str:
+    """Use DATABASE_PATH (e.g. a Render persistent disk at /var/data/rewards.db) when its
+    folder exists; otherwise fall back to ./rewards.db so the app still starts locally or
+    on a plan without a mounted disk."""
+    configured = os.environ.get("DATABASE_PATH")
+    if configured:
+        folder = os.path.dirname(os.path.abspath(configured))
+        if os.path.isdir(folder):
+            return configured
+        print(
+            f"[WARNING] DATABASE_PATH={configured} but folder {folder} does not exist "
+            "(is the persistent disk mounted?). Falling back to ./rewards.db — "
+            "data will NOT survive redeploys."
+        )
+    return "./rewards.db"
+
+DB_PATH = _resolve_db_path()
+print(f"[startup] Using SQLite database at: {os.path.abspath(DB_PATH)}")
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,

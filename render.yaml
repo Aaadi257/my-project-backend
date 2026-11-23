@@ -7,6 +7,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
+      - key: DATABASE_PATH
+        value: /var/data/rewards.db
     disk:
       name: rewards-data
       mountPath: /var/data
