@@ -55,5 +55,23 @@ class TestScoringLogic(unittest.TestCase):
         self.assertEqual(calculate_add_on_sale_score(100, 16, None, None, None, None), 12)
         self.assertAlmostEqual(calculate_add_on_sale_score(100, 16, 100, 10, None, None), 6.0) # (12 + 0)/2
 
+    def test_fiscal_quarter(self):
+        from logic import fiscal_quarter
+        cases = {
+            "April 2026": "Q1: April 1 - June 30, 2026",
+            "June 2026": "Q1: April 1 - June 30, 2026",
+            "July 2026": "Q2: July 1 - September 30, 2026",
+            "September 2026": "Q2: July 1 - September 30, 2026",
+            "October 2026": "Q3: October 1 - December 31, 2026",
+            "December 2026": "Q3: October 1 - December 31, 2026",
+            "January 2027": "Q4: January 1 - March 31, 2027",
+            "March 2027": "Q4: January 1 - March 31, 2027",
+        }
+        for month, expected in cases.items():
+            self.assertEqual(fiscal_quarter(month), expected, month)
+        self.assertIsNone(fiscal_quarter(""))
+        self.assertIsNone(fiscal_quarter("Smarch 2026"))
+        self.assertIsNone(fiscal_quarter(None))
+
 if __name__ == '__main__':
     unittest.main()

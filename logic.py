@@ -134,8 +134,32 @@ def calculate_inventory_form_score(value: Optional[str]) -> int:
     backward compatibility with previously stored records."""
     return 10 if value in ("filled_correctly", "filled") else 0
 
+MONTHS = ["January", "February", "March", "April", "May", "June",
+          "July", "August", "September", "October", "November", "December"]
+
+# The only four quarters used for Staff Alteration and Manager Quarterly Leave (financial year).
+QUARTERS = [
+    ("Q1", "April 1", "June 30", (4, 5, 6)),
+    ("Q2", "July 1", "September 30", (7, 8, 9)),
+    ("Q3", "October 1", "December 31", (10, 11, 12)),
+    ("Q4", "January 1", "March 31", (1, 2, 3)),
+]
+
+def fiscal_quarter(month: Optional[str]) -> Optional[str]:
+    """'August 2026' -> 'Q2: July 1 - September 30, 2026'. Returns None if the month can't be read."""
+    try:
+        name, year = (month or "").split(" ")
+        month_no = MONTHS.index(name) + 1
+        int(year)
+    except ValueError:
+        return None
+    for code, start, end, months in QUARTERS:
+        if month_no in months:
+            return f"{code}: {start} - {end}, {year}"
+    return None
+
 def calculate_staff_alteration_score(count: Optional[int]) -> int:
-    """Staff Alteration (trailing 3-month count, fewer is better). Blank/None contributes 0."""
+    """Staff Alteration (count for the scorecard month's quarter, Q1-Q4; fewer is better). Blank/None contributes 0."""
     if count is None: return 0
     if count <= 0: return 10
     if count <= 1: return 8
@@ -145,7 +169,7 @@ def calculate_staff_alteration_score(count: Optional[int]) -> int:
     return 0
 
 def calculate_manager_quarterly_leave_score(days: Optional[float]) -> int:
-    """Manager Quarterly Leave (trailing 3-month leave days, fewer is better). Blank/None contributes 0."""
+    """Manager Quarterly Leave (leave days in the scorecard month's quarter, Q1-Q4; fewer is better). Blank/None contributes 0."""
     if days is None: return 0
     if days <= 3: return 10
     if days <= 5: return 8

@@ -382,8 +382,9 @@ def export_excel(id: int, db: Session = Depends(get_db)):
     ws.append(["Negative Reviews", f"A: {metrics.negative_reviews_amritsari}, C: {metrics.negative_reviews_chennai}, CM: {metrics.negative_reviews_chaat_masala}", bd.negative_review_score])
     ws.append(["Add On Sale", f"A: {metrics.add_on_sale_amritsari}/{metrics.total_sale_amritsari}, C: {metrics.add_on_sale_chennai}/{metrics.total_sale_chennai}, CM: {metrics.add_on_sale_chaat_masala}/{metrics.total_sale_chaat_masala}", bd.add_on_sale_score])
     ws.append(["Software Inventory", metrics.inventory_form, bd.inventory_form_score])
-    ws.append(["Staff Alteration (3-mo)", metrics.staff_alteration, bd.staff_alteration_score])
-    ws.append(["Manager Quarterly Leave (3-mo)", metrics.manager_quarterly_leave, bd.manager_quarterly_leave_score])
+    quarter = logic.fiscal_quarter(item.month) or "quarter"
+    ws.append([f"Staff Alteration ({quarter})", metrics.staff_alteration, bd.staff_alteration_score])
+    ws.append([f"Manager Quarterly Leave ({quarter})", metrics.manager_quarterly_leave, bd.manager_quarterly_leave_score])
 
     handle, path = tempfile.mkstemp(suffix=".xlsx")
     os.close(handle)

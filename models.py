@@ -89,7 +89,8 @@ class MetricsInput(BaseModel):
     # legacy "filled" still scores 10 for backward compatibility)
     inventory_form: Optional[str] = None
 
-    # Rolling 3-month metrics (value represents selected month + previous 2 months)
+    # Quarterly metrics: value covers the financial quarter the scorecard month falls in
+    # (Q1 Apr-Jun, Q2 Jul-Sep, Q3 Oct-Dec, Q4 Jan-Mar; see logic.fiscal_quarter)
     staff_alteration: Optional[int] = None
     manager_quarterly_leave: Optional[float] = None
 
